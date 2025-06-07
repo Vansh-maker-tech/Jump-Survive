@@ -5,34 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Jump & Survive</title>
   <style>
-    #btn1, #btn2, #start {
+    #btn2, #start, #Restart, #shoot {
       position: absolute;
       width: 11vh;
       height: 7vh;
-      background-color: maroon;
+      border-radius: 11px;
       color: white;
     }
-    #Restart {
-      position: absolute;
-      width: 11vh;
-      height: 7vh;
+
+    #btn2, #start, #Restart {
       background-color: maroon;
-      color: white;
     }
-    #btn1 { bottom: 1vh; left: 1vh; }
+
+    #shoot {
+      height: 6vh;
+      background-color: green;
+      color: maroon;
+      border: 0.4vh solid black;
+      border-radius: 1.01vh;
+    }
+
+    #shoot:active,
+    #btn2:active,
+    #start:active,
+    #Restart:active {
+      background-color: orange;
+      color: green;
+    }
+
     #btn2 { bottom: 1vh; right: 10vh; }
     #start { bottom: 51vh; right: 24vh; }
+    #Restart { bottom: 51vh; right: 24vh; visibility: hidden; }
+    #shoot { bottom: 72vh; right: 1vh; visibility: hidden; }
     #score { position: absolute; top: 1vh; right: 1vh; }
-    #Restart { position: absolute; bottom: 51vh; right: 24vh; visibility: hidden; }
   </style>
 </head>
 <body>
-
   <button id="start">Start</button>
-  <button id="btn1">></button>
   <button id="btn2">Jump</button>
-  <audio id="GameOver" src="seagullhit.ogg"></audio>
   <button id="Restart" onclick="Reset()">Restart</button>
+  <button id="shoot" onclick="shoot()">shoot</button>
+
+  <audio id="GameOver" src="seagullhit.ogg"></audio>
+  <audio id="shootS" src="seagullattack.ogg"></audio>
+
   <h1 id="score">Score : 0</h1>
 
   <script src="https://unpkg.com/kaboom@3000.0.0-beta.5/dist/kaboom.js"></script>
@@ -44,7 +60,6 @@
 
     loadSprite("player", "player.png");
 
-    // Global game variables
     let player;
     let isGameOver = false;
     let JUMPCOUNT = 0;
@@ -56,6 +71,8 @@
     const GRAVITY = 1600;
     const PLATFORM_HEIGHT = 56;
     const MAX_JUMP = 2;
+    const BULLETS = 460;
+    let bgColor = [210, 210, 255];
 
     setGravity(GRAVITY);
 
@@ -85,19 +102,26 @@
       const scoreBox = add([
         rect(25, 35),
         pos(5, 453),
-        scale(1),
         area(),
         opacity(0),
         "Score"
       ]);
 
-      const enemyLoop = loop(4, () => {
+      loop(16, () => {
+        bgColor = [
+          Math.max(20, bgColor[0] - 15),
+          Math.max(20, bgColor[1] - 15),
+          Math.max(60, bgColor[2] - 15)
+        ];
+        setBackground(bgColor);
+      });
+
+      loop(4, () => {
         if (isGameOver) return;
 
         const enemy = add([
           rect(25, 35),
           pos(400, 453),
-          scale(1),
           area(),
           "enemy"
         ]);
@@ -112,16 +136,21 @@
             isGameOver = true;
             addKaboom(player.pos);
             document.getElementById("GameOver").play();
-            console.log("Collision successful");
             document.getElementById("Restart").style.visibility = "visible";
+            ESPEED = 162;
+            shake(7);
+            bgColor = [210, 210, 255];
           }
         });
 
         scoreBox.onCollide("enemy", () => {
           if (!isGameOver) {
             score++;
-            ESPEED += 1.21
+            ESPEED += 1.21;
             document.getElementById("score").innerText = "Score : " + score;
+            if (score >= 40) {
+              document.getElementById("shoot").style.visibility = "visible";
+            }
           }
         });
       });
@@ -135,20 +164,14 @@
       });
     });
 
-    // Button Functions
-    function Reset(){
-      go("game")
+    function Reset() {
+      go("game");
       document.getElementById("Restart").style.visibility = "hidden";
     }
-    function startGame() {
-      go("game")
-      document.getElementById("start").style.visibility = "hidden";
-    }
 
-    function right() {
-      if (!isGameOver && player) {
-        player.move(SPEED, 0);
-      }
+    function startGame() {
+      go("game");
+      document.getElementById("start").style.visibility = "hidden";
     }
 
     function jump() {
@@ -158,9 +181,28 @@
       }
     }
 
-    // Connect buttons to functions
+    function shoot() {
+      const bullet = add([
+        rect(10, 4),
+        color(255, 0, 0),
+        pos(player.pos.x + 25, player.pos.y + 44),
+        area(),
+        offscreen({ destroy: true }),
+        "bullet"
+      ]);
+
+      bullet.onUpdate(() => {
+        bullet.move(BULLETS, 0);
+      });
+
+      bullet.onCollide("enemy", (enemy) => {
+        destroy(enemy);
+        destroy(bullet);
+        document.getElementById("shootS").play();
+      });
+    }
+
     document.getElementById("start").onclick = startGame;
-    document.getElementById("btn1").onclick = right;
     document.getElementById("btn2").onclick = jump;
   </script>
 </body>
